@@ -1,0 +1,109 @@
+<html>
+
+<head>
+    <title>HLS播放</title>
+    <script src="https://vjs.zencdn.net/7.4.1/video.js"></script>
+    <link href="https://vjs.zencdn.net/7.4.1/video-js.css" rel="stylesheet">
+    <style type="text/css">
+    </style>
+</head>
+
+<body>
+    <!-- 纯净拉流 -->
+    <h2>纯净直播流</h2>
+    <video-js id=example-video width="1280" height="720" class="vjs-default-skin" controls>
+        <source
+            src="https://d1--cn-gotcha101.bilivideo.com/live-bvc/334644/live_7734200_bs_7236416_1500.m3u8?expires=1684253692&len=0&oi=827633949&pt=h5&qn=150&trid=10035a71d53b4f8b40f3b441a2c9808e56bf&sigparams=cdn,expires,len,oi,pt,qn,trid&cdn=cn-gotcha01&sign=29abdb34280abd39cd865cd52fe176ea&sk=8850a2b8817f9dbc872b6389c642a426&p2p_type=0&sl=10&free_type=0&mid=0&pp=rtmp&source=onetier&trace=10&site=d471bf630851c115b2af5f07450a540d&order=1"
+            type="application/x-mpegURL">
+    </video-js>
+    <!-- 处理后 -->
+    <h2>处理后</h2>
+    <canvas id="example-video_html5_canvas">  
+    </canvas>
+
+
+
+
+    <script>
+        var videostate="pause"
+        var player=null
+        var logtick=0
+        /**
+        * 处理像素信息
+        */
+        function processData(imagedata){
+            for (let i = 0; i < imagedata.data.length; i += 4) {
+                const avg = (imagedata.data[i] + imagedata.data[i + 1] + imagedata.data[i + 2]) / 3;
+                imagedata.data[i] = avg;
+                imagedata.data[i + 1] = avg;
+                imagedata.data[i + 2] = avg;
+            }
+            return imagedata
+        }
+
+        /**
+         * 从视频中提取帧
+         */
+        function extractFrames() {
+            const video = document.querySelector("#example-video_html5_api");
+            // 获取当前视频信息
+            const videoWidth = video.videoWidth;
+            const videoHeight = video.videoHeight;
+            if(logtick==0){
+                console.log("videoWidth:",videoWidth,"videoHeight:",videoHeight);
+                document.querySelector("#example-video_html5_canvas").setAttribute("width",videoWidth);
+                document.querySelector("#example-video_html5_canvas").setAttribute("height",videoHeight);
+            }
+            // 获取画布
+            const canvas = document.querySelector("#example-video_html5_canvas");
+            const canvasContext = canvas.getContext("2d");
+            // 绘制当前视频的画面到canvas
+            canvasContext.drawImage(video, 0, 0, videoWidth, videoHeight);
+            // 获取当前视频的像素信息
+            let imagedata=canvasContext.getImageData(0, 0, videoWidth, videoHeight)
+            // 对像素进行处理
+            imagedata=processData(imagedata)
+            // 将imagedata放回canvas中
+            // 根据实际清晰度不同，视频画面大小不同
+            canvasContext.putImageData(imagedata, 0, 0, 0, 0, videoWidth, videoHeight);
+            logtick+=1;
+        }
+        // 每隔30ms调用一次处理
+        setInterval(()=>{
+            if(videostate==="play"){
+                extractFrames();
+            }
+        },30)
+        // 新建播放器
+        player = videojs('example-video',{},function playerReady(){
+            console.log("播放器就绪！");
+            this.on("play",()=>{
+                console.log("play")
+                videostate="play"
+            })
+            this.on("pause",()=>{
+                console.log("pause")
+                videostate="pause"
+            })
+        });
+        // 点击使canvas全屏
+        document.getElementById("example-video_html5_canvas").onclick = function () {
+            var elem = document.getElementById("example-video_html5_canvas");
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.mozRequestFullScreen) {
+                /* Firefox */
+                elem.mozRequestFullScreen();
+            } else if (elem.webkitRequestFullscreen) {
+                /* Chrome, Safari and Opera */
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                /* IE/Edge */
+                elem.msRequestFullscreen();
+            }
+        };
+
+    </script>
+</body>
+
+</html>
