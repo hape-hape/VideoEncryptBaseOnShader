@@ -146,13 +146,13 @@
 
             return imagedata1
         }
-        // 工具函数
+
         function getPixel(imagedata, row, col) {
             let index = (row * imagedata.width + col) * 4
             let pixel = [imagedata.data[index], imagedata.data[index + 1], imagedata.data[index + 2], imagedata.data[index + 3]]
             return pixel
         }
-        // x:第几列，y:第几行
+
         function setPixel(imagedata, row, col, pixel){
             let index = (row * imagedata.width + col) * 4
             imagedata.data[index] = pixel[0]
@@ -223,12 +223,18 @@
                     canvasBackwardVideo1.setAttribute("height", backwarddata1.height);
                 }
                 canvasBackwardctx1.putImageData(backwarddata1, 0, 0);
-                logtick += 1;
             }
             // 每隔40ms调用一次处理
             setInterval(() => {
                 if (videostate === "play") {
+                    // 计算调用extractFrames耗费的时间
+                    let start = new Date().getTime()
                     extractFrames();
+                    let end = new Date().getTime()
+                    if(logtick%50==0){
+                        console.log("extractFrames耗费时间：" + (end - start) + "ms")
+                    }
+                    logtick += 1;
                 }
             }, 40)
             // 新建播放器
