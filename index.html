@@ -40,8 +40,11 @@
 
 
     <script>
-        const shiftrowsnum=3//每隔多少行显示一行视频1画面
-        const maxcolorshiftpercent=0.8//偏移的颜色最多占据剩余颜色空间的百分点
+        const shiftrowsnum=3//每隔多少行显示一行视频1画面【2~8】
+        const maxcolorshiftpercent=0.7//偏移的颜色最多占据剩余颜色空间的百分点【0.0~1.0】
+        const filpeachrow=4//多少有效行对称翻转[1~16]
+        const colorreverse=true//颜色反转
+        const frame=60//每秒帧数
         /**
         * 正向处理像素信息（加密）
         * @param {Array} imagedatalist 一个包含两个图像的数组，分别是直播流1和直播流2的图像
@@ -75,7 +78,6 @@
                     setPixel(imagedata1, j+shiftrowsnum-1, i, pixel4)
                 }
             }
-
 
 
 
@@ -188,14 +190,15 @@
         // 向右偏移
         function shiftRight(originrow,imagedata1){
             // 模四倍的偏移行数
-            let relativep=originrow%(8*shiftrowsnum)
-            // 颜色反转
-            for(let i=0;i<imagedata1.width;i+=1){
-                let pixel1=getPixel(imagedata1,originrow,i)
-                setPixel(imagedata1,originrow,i,[255-pixel1[0],255-pixel1[1],255-pixel1[2],255])
+            let relativep=originrow%(2*filpeachrow*shiftrowsnum)
+            if(colorreverse){
+                for(let i=0;i<imagedata1.width;i+=1){
+                    let pixel1=getPixel(imagedata1,originrow,i)
+                    setPixel(imagedata1,originrow,i,[255-pixel1[0],255-pixel1[1],255-pixel1[2],255])
+                }
             }
             // 上一半 对称
-            if(relativep<4*shiftrowsnum){
+            if(relativep<filpeachrow*shiftrowsnum){
                 // 按照中间对称轴左右反转
                 for(let i=0;i<Math.floor(imagedata1.width/2);i+=1){
                     let pixel1=getPixel(imagedata1,originrow,i)
@@ -209,14 +212,17 @@
         // 向左偏移
         function shiftLeft(originrow,imagedata1){
             // 模四倍的偏移行数
-            let relativep=originrow%(8*shiftrowsnum)
-            // 颜色反转
-            for(let i=0;i<imagedata1.width;i+=1){
-                let pixel1=getPixel(imagedata1,originrow,i)
-                setPixel(imagedata1,originrow,i,[255-pixel1[0],255-pixel1[1],255-pixel1[2],255])
+            let relativep=originrow%(2*filpeachrow*shiftrowsnum)
+
+            if(colorreverse){
+                for(let i=0;i<imagedata1.width;i+=1){
+                    let pixel1=getPixel(imagedata1,originrow,i)
+                    setPixel(imagedata1,originrow,i,[255-pixel1[0],255-pixel1[1],255-pixel1[2],255])
+                }
             }
+
             // 上一半 对称
-            if(relativep<4*shiftrowsnum){
+            if(relativep<filpeachrow*shiftrowsnum){
                 // 按照中间对称轴左右反转
                 for(let i=0;i<Math.floor(imagedata1.width/2);i+=1){
                     let pixel1=getPixel(imagedata1,originrow,i)
@@ -302,7 +308,7 @@
                     }
                     logtick += 1;
                 }
-            }, 40)
+            }, Math.floor(1000/frame))
             // 新建播放器
             player1 = videojs('stream-video1', {}, function playerReady() {
                 this.volume(0)
