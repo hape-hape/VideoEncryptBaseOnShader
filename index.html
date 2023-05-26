@@ -12,9 +12,9 @@
     <!-- 纯净拉流 -->
     <h2>纯净直播流1</h2>
     <video-js id="stream-video1" width="1280" height="720" class="vjs-default-skin" controls>
-        <source
+        <!-- <source
             src="R6.mp4"
-            type="video/mp4">
+            type="video/mp4"> -->
         <source
         src="https://d1--cn-gotcha101.bilivideo.com/live-bvc/334644/live_7734200_bs_7236416_1500.m3u8?expires=1684253692&len=0&oi=827633949&pt=h5&qn=150&trid=10035a71d53b4f8b40f3b441a2c9808e56bf&sigparams=cdn,expires,len,oi,pt,qn,trid&cdn=cn-gotcha01&sign=29abdb34280abd39cd865cd52fe176ea&sk=8850a2b8817f9dbc872b6389c642a426&p2p_type=0&sl=10&free_type=0&mid=0&pp=rtmp&source=onetier&trace=10&site=d471bf630851c115b2af5f07450a540d&order=1"
         type="application/x-mpegURL">
@@ -43,11 +43,8 @@
 
 
     <script>
-        const shiftrowsnum=3//每隔多少行显示一行视频1画面【2~8】
         const maxcolorshiftpercent=0.7//偏移的颜色最多占据剩余颜色空间的百分点【0.0~1.0】
-        const filpeachrow=4//多少有效行对称翻转[1~16]
-        const colorreverse=true//颜色反转
-        const frame=15//每秒帧数
+        const frame=25//每秒帧数
         const mocktransfer=false//模拟传输杂色
         /**
         * 正向处理像素信息（加密）
@@ -57,36 +54,21 @@
         function forwardProcessData(imagedatalist) {
             let imagedata1 = imagedatalist[0]
             let imagedata2 = imagedatalist[1]
-
-            // 每四行，把视频2的第一行和第二行第三行放到视频1
-            for (let i = 0; i < imagedata1.width; i += 1) {
-                for (let j = 0; j < imagedata1.height; j += shiftrowsnum) {
-                    for(let s=0;s<shiftrowsnum-1;s+=1){
-                        setPixel(imagedata1, j+s, i, getPixel(imagedata2, j+s, i))
+            let pindex=0
+            for(let i=0;i<imagedata1.height;i+=2){
+                for(let j=0;j<imagedata1.width;j+=1){
+                    // 获取视频1每两行的第一行的每三个像素点中的第一个像素点,n%3=0
+                    if(j%3==0){
+                        pindex=getPixelIndex(imagedata1,i,j)
                     }
+                    // 把视频2每两行的第一行的每三个像素点复制到第二行的每三个像素点，三个像素的R，G，B颜色分别空间放缩对应上面pindex的R，G，B
+                    setPixel(imagedata2,i+1,j,
+                        shiftcolor( imagedata2.data[getPixelIndex(imagedata2,i,j)], imagedata1.data[pindex]),
+                        shiftcolor( imagedata2.data[getPixelIndex(imagedata2,i,j)+1],imagedata1.data[pindex+1]),
+                        shiftcolor( imagedata2.data[getPixelIndex(imagedata2,i,j)+2],imagedata1.data[pindex+2]))
                 }
             }
-            // 混淆视频内容
-            for (let j = 0; j < imagedata1.height; j += shiftrowsnum) {
-                shiftRight(j+shiftrowsnum-1,imagedata1)
-            }
-            // 每4行，把视频1的第4行的数据按照当前第3行剩余的颜色空间作百分比放缩(限制最多偏移0.6)，加上第3行的基数，放到第4行
-            for (let i = 0; i < imagedata1.width; i += 1) {
-                for (let j = 0; j < imagedata1.height; j += shiftrowsnum) {
-                    let pixel1 = getPixel(imagedata1, j+shiftrowsnum-2, i)
-                    let pixel2 = getPixel(imagedata1, j+shiftrowsnum-1, i)//视频1要隐藏的第4行
-                    let pixel4 = [0, 0, 0, 0]
-                    for (let k = 0; k < 4; k += 1) {
-                        pixel4[k] = Math.floor(( pixel2[k] / 255 ) * ( (255 - pixel1[k])* maxcolorshiftpercent ) + pixel1[k])
-                    }
-                    setPixel(imagedata1, j+shiftrowsnum-1, i, pixel4)
-                }
-            }
-
-
-
-
-            return imagedata1
+            return imagedata2
         }
 
 
@@ -105,7 +87,7 @@
                 for (let j = 0; j < imagedata1.height; j += 1) {
                     let random = Math.random()
                     if (random < 0.0001) {
-                        setPixel(imagedata1, j, i, [255, 255, 255, 255])
+                        setPixel(imagedata1, j, i, 255, 255, 255)
                     }
                 }
             }
@@ -116,7 +98,7 @@
                     if (random < 0.001) {
                         const randomblur = Math.floor(Math.random() * 10)
                         const index1 = (j * imagedata1.width + i) * 4
-                        setPixel(imagedata1, j, i, [imagedata1.data[index1] + randomblur, imagedata1.data[index1 + 1] + randomblur, imagedata1.data[index1 + 2] + randomblur, imagedata1.data[index1 + 3] + randomblur])
+                        setPixel(imagedata1, j, i, imagedata1.data[index1] + randomblur, imagedata1.data[index1 + 1] + randomblur, imagedata1.data[index1 + 2] + randomblur)
                     }
                 }
             }
@@ -130,7 +112,7 @@
                         let randomy = Math.floor(Math.random() * 10)
                         let index2 = ((j + randomy) * imagedata1.width + i + randomx) * 4
                         try {
-                            setPixel(imagedata1, j, i, [imagedata1.data[index2], imagedata1.data[index2 + 1], imagedata1.data[index2 + 2], imagedata1.data[index2 + 3]])
+                            setPixel(imagedata1, j, i, imagedata1.data[index2], imagedata1.data[index2 + 1], imagedata1.data[index2 + 2])
                         } catch (error) {
                             
                         }
@@ -149,30 +131,29 @@
          */
         function backwardProcessData(imagedatalist) {
             let imagedata1 = imagedatalist[0]
-            // 每4行，把视频1的第4行的数据减去第三行的数据，按照放缩比例百分比放缩回255，放到第4行
-            for (let i = 0; i < imagedata1.width; i += 1) {
-                for (let j = 0; j < imagedata1.height; j += shiftrowsnum) {
-                    let pixel1 = getPixel(imagedata1, j+shiftrowsnum-2, i)//视频1的第3行
-                    let pixel2 = getPixel(imagedata1, j+shiftrowsnum-1, i)//视频1隐藏的第4行
-                    let pixel4 = [0, 0, 0, 0]
-                    for (let k = 0; k < 4; k += 1) {
-                        pixel4[k] = Math.floor((pixel2[k]-pixel1[k])/((255-pixel1[k])*maxcolorshiftpercent)*255)
+            for(let i=0;i<imagedata1.height;i+=2){
+                let r=0,g=0,b=0
+                for(let j=0;j<imagedata1.width;j+=1){
+                    // 获取视频1每两行的第二行的每三个像素点，根据其获取隐藏的视频的一个像素本真R，G，B值
+                    if(j%3==0){
+                        // R
+                        r=shiftcolorback(imagedata1.data[getPixelIndex(imagedata1,i+1,j)],imagedata1.data[getPixelIndex(imagedata1,i,j)])
                     }
-                    // 否则这一位是NaN
-                    pixel4[3]=255
-                    setPixel(imagedata1, j+shiftrowsnum-1, i, pixel4)
-                }
-            }
-            // 混淆视频内容
-            for (let j = 0; j < imagedata1.height; j += shiftrowsnum) {
-                shiftLeft(j+shiftrowsnum-1,imagedata1)
-            }
-            // 每4行，用第四行数据替换前三行
-            for (let i = 0; i < imagedata1.width; i += 1) {
-                for (let j = 0; j < imagedata1.height; j += shiftrowsnum) {
-                    let pixel1 = getPixel(imagedata1, j+shiftrowsnum-1, i)
-                    for(let s=0;s<shiftrowsnum-1;s+=1){
-                        setPixel(imagedata1, j+s, i, pixel1)
+                    if(j%3==1){
+                        // G
+                        g=shiftcolorback(imagedata1.data[getPixelIndex(imagedata1,i+1,j)+1],imagedata1.data[getPixelIndex(imagedata1,i,j)+1])
+                    }
+                    if(j%3==2){
+                        // B
+                        b=shiftcolorback(imagedata1.data[getPixelIndex(imagedata1,i+1,j)+2],imagedata1.data[getPixelIndex(imagedata1,i,j)+2])
+                    }
+                    // 赋值
+                    if(j%3==0 && j!=0){
+                        for(let k=j-3;k<j;k++){
+                            setPixel(imagedata1,i,k,r,g,b)
+                            setPixel(imagedata1,i+1,k,r,g,b)
+
+                        }
                     }
                 }
             }
@@ -180,71 +161,41 @@
             return imagedata1
         }
 
-        function getPixel(imagedata, row, col) {
+        function getPixelIndex(imagedata, row, col) {
             let index = (row * imagedata.width + col) * 4
-            let pixel = [imagedata.data[index], imagedata.data[index + 1], imagedata.data[index + 2], imagedata.data[index + 3]]
-            return pixel
+            return index
         }
 
-        function setPixel(imagedata, row, col, pixel){
+        function setPixel(imagedata, row, col, r, g, b){
             let index = (row * imagedata.width + col) * 4
-            imagedata.data[index] = pixel[0]
-            imagedata.data[index + 1] = pixel[1]
-            imagedata.data[index + 2] = pixel[2]
-            imagedata.data[index + 3] = pixel[3]
-        }
-        // 向右偏移
-        function shiftRight(originrow,imagedata1){
-            // 模四倍的偏移行数
-            let relativep=originrow%(2*filpeachrow*shiftrowsnum)
-            if(colorreverse){
-                for(let i=0;i<imagedata1.width;i+=1){
-                    let pixel1=getPixel(imagedata1,originrow,i)
-                    setPixel(imagedata1,originrow,i,[pixel1[0],255-pixel1[1],pixel1[2],255])
-                }
-            }
-            // 上一半 对称
-            if(relativep<filpeachrow*shiftrowsnum){
-                // 按照中间对称轴左右反转
-                for(let i=0;i<Math.floor(imagedata1.width/2);i+=1){
-                    let pixel1=getPixel(imagedata1,originrow,i)
-                    let pixel2=getPixel(imagedata1,originrow,imagedata1.width-i-1)
-                    setPixel(imagedata1,originrow,i,pixel2)
-                    setPixel(imagedata1,originrow,imagedata1.width-i-1,pixel1)
-                }
-            }
-
-        }
-        // 向左偏移
-        function shiftLeft(originrow,imagedata1){
-            // 模四倍的偏移行数
-            let relativep=originrow%(2*filpeachrow*shiftrowsnum)
-
-            if(colorreverse){
-                for(let i=0;i<imagedata1.width;i+=1){
-                    let pixel1=getPixel(imagedata1,originrow,i)
-                    setPixel(imagedata1,originrow,i,[pixel1[0],255-pixel1[1],pixel1[2],255])
-                }
-            }
-
-            // 上一半 对称
-            if(relativep<filpeachrow*shiftrowsnum){
-                // 按照中间对称轴左右反转
-                for(let i=0;i<Math.floor(imagedata1.width/2);i+=1){
-                    let pixel1=getPixel(imagedata1,originrow,i)
-                    let pixel2=getPixel(imagedata1,originrow,imagedata1.width-i-1)
-                    setPixel(imagedata1,originrow,i,pixel2)
-                    setPixel(imagedata1,originrow,imagedata1.width-i-1,pixel1)
-                }
-            }
+            imagedata.data[index] = r
+            imagedata.data[index + 1] = g
+            imagedata.data[index + 2] = b
+            imagedata.data[index + 3] = 255
         }
 
+        /**
+         * 把basevalue（本真）根据sidevalue（隐藏）放缩，得到mixvalue
+         */
+        function shiftcolor(basevalue, sidevalue){
+            return Math.floor(basevalue*sidevalue/255) // 所占空间
+            // return Math.floor((255-basevalue)*sidevalue/255+basevalue) // 剩余空间
+        }
+
+        /**
+         * 把mixvalue（混合后的）根据basevalue（本真）放缩回sidevalue（隐藏）
+         */
+        function shiftcolorback(mixvalue, basevalue){
+            return Math.floor(255*mixvalue/basevalue) // 所占空间
+            // return Math.floor((mixvalue-basevalue)*255/(255-basevalue)) // 剩余空间
+        }
+        
         // =============初始化==============
         var videostate = "pause"
         var player1 = null
         var player2 = null
         
-        var logtick = 0
+        var logtick = -1
         window.addEventListener("load", function () {
 
             /**
