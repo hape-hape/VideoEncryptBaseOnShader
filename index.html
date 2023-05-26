@@ -13,8 +13,11 @@
     <h2>纯净直播流1</h2>
     <video-js id="stream-video1" width="1280" height="720" class="vjs-default-skin" controls>
         <source
-            src="https://d1--cn-gotcha101.bilivideo.com/live-bvc/334644/live_7734200_bs_7236416_1500.m3u8?expires=1684253692&len=0&oi=827633949&pt=h5&qn=150&trid=10035a71d53b4f8b40f3b441a2c9808e56bf&sigparams=cdn,expires,len,oi,pt,qn,trid&cdn=cn-gotcha01&sign=29abdb34280abd39cd865cd52fe176ea&sk=8850a2b8817f9dbc872b6389c642a426&p2p_type=0&sl=10&free_type=0&mid=0&pp=rtmp&source=onetier&trace=10&site=d471bf630851c115b2af5f07450a540d&order=1"
-            type="application/x-mpegURL">
+            src="R6.mp4"
+            type="video/mp4">
+        <source
+        src="https://d1--cn-gotcha101.bilivideo.com/live-bvc/334644/live_7734200_bs_7236416_1500.m3u8?expires=1684253692&len=0&oi=827633949&pt=h5&qn=150&trid=10035a71d53b4f8b40f3b441a2c9808e56bf&sigparams=cdn,expires,len,oi,pt,qn,trid&cdn=cn-gotcha01&sign=29abdb34280abd39cd865cd52fe176ea&sk=8850a2b8817f9dbc872b6389c642a426&p2p_type=0&sl=10&free_type=0&mid=0&pp=rtmp&source=onetier&trace=10&site=d471bf630851c115b2af5f07450a540d&order=1"
+        type="application/x-mpegURL">
     </video-js>
     <h2>纯净直播流2</h2>
     <video-js id="stream-video2" width="1280" height="720" class="vjs-default-skin" controls>
@@ -44,7 +47,8 @@
         const maxcolorshiftpercent=0.7//偏移的颜色最多占据剩余颜色空间的百分点【0.0~1.0】
         const filpeachrow=4//多少有效行对称翻转[1~16]
         const colorreverse=true//颜色反转
-        const frame=60//每秒帧数
+        const frame=15//每秒帧数
+        const mocktransfer=false//模拟传输杂色
         /**
         * 正向处理像素信息（加密）
         * @param {Array} imagedatalist 一个包含两个图像的数组，分别是直播流1和直播流2的图像
@@ -93,7 +97,9 @@
          */
         function middleProcessData(imagedatalist){
             let imagedata1=imagedatalist[0]
-
+            if(!mocktransfer){
+                return imagedata1
+            }
             // 加点噪声
             for (let i = 0; i < imagedata1.width; i += 1) {
                 for (let j = 0; j < imagedata1.height; j += 1) {
@@ -194,7 +200,7 @@
             if(colorreverse){
                 for(let i=0;i<imagedata1.width;i+=1){
                     let pixel1=getPixel(imagedata1,originrow,i)
-                    setPixel(imagedata1,originrow,i,[255-pixel1[0],255-pixel1[1],255-pixel1[2],255])
+                    setPixel(imagedata1,originrow,i,[pixel1[0],255-pixel1[1],pixel1[2],255])
                 }
             }
             // 上一半 对称
@@ -217,7 +223,7 @@
             if(colorreverse){
                 for(let i=0;i<imagedata1.width;i+=1){
                     let pixel1=getPixel(imagedata1,originrow,i)
-                    setPixel(imagedata1,originrow,i,[255-pixel1[0],255-pixel1[1],255-pixel1[2],255])
+                    setPixel(imagedata1,originrow,i,[pixel1[0],255-pixel1[1],pixel1[2],255])
                 }
             }
 
@@ -280,6 +286,8 @@
                 // 根据实际清晰度不同，视频画面大小不同
                 // 如果第一次运行此函数，需要设置canvas的宽高
                 if (logtick == 0) {
+                    console.log("视频1长宽：" + forwarddata1.width + " " + forwarddata1.height)
+                    console.log("视频2长宽：" + imagedata2.width + " " + imagedata2.height)
                     canvasForwardVideo1.setAttribute("width", forwarddata1.width);
                     canvasForwardVideo1.setAttribute("height", forwarddata1.height);
                     console.log(forwarddata1)
